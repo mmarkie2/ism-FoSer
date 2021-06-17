@@ -3,6 +3,8 @@ package pollub.ism.foser;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
@@ -12,6 +14,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.content.SharedPreferences;
+
+import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 public class MainActivity extends AppCompatActivity {
 
@@ -46,11 +50,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clickStart(View view) {
-        Toast.makeText(this,"Start",Toast.LENGTH_SHORT).show();
+
+        getPreferences();
+
+        Intent startIntent = new Intent(this,MyForegroundService.class);
+        startIntent.putExtra(MyForegroundService.MESSAGE,message);
+        startIntent.putExtra(MyForegroundService.TIME,show_time);
+        startIntent.putExtra(MyForegroundService.WORK,work);
+        startIntent.putExtra(MyForegroundService.WORK_DOUBLE,work_double);
+
+
+        ContextCompat.startForegroundService(this, startIntent);
+        updateUI();
     }
 
     public void clickStop(View view) {
-        Toast.makeText(this,"Stop",Toast.LENGTH_SHORT).show();
+
+        Intent stopIntent = new Intent(this, MyForegroundService.class);
+        stopService(stopIntent);
+        updateUI();
+
     }
 
     public void clickRestart(View view) {
@@ -70,7 +89,34 @@ public class MainActivity extends AppCompatActivity {
                 +"work: " + work.toString() + "\n"
                 +"double: " + work_double.toString();
     }
+    @SuppressWarnings("deprecation")
+    private boolean isMyForegroundServiceRunning(){
+
+        String myServiceName = MyForegroundService.class.getName();
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+
+        for(ActivityManager.RunningServiceInfo runningService : activityManager.getRunningServices(Integer.MAX_VALUE)) {
+            String runningServiceName = runningService.service.getClassName();
+            if(runningServiceName.equals(myServiceName)){
+                return true;
+            }
+        }
+        return false;
+    }
     private void updateUI(){
+
+        if(isMyForegroundServiceRunning()){
+            buttonStart.setEnabled(false);
+            buttonStop.setEnabled(true);
+            buttonRestart.setEnabled(true);
+            textInfoService.setText(getString(R.string.info_service_running));
+        }
+        else {
+            buttonStart.setEnabled(true);
+            buttonStop.setEnabled(false);
+            buttonRestart.setEnabled(false);
+            textInfoService.setText(getString(R.string.info_service_not_running));
+        }
 
         textInfoSettings.setText(getPreferences());
     }
